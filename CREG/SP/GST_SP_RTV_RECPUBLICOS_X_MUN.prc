@@ -1,147 +1,153 @@
-CREATE OR REPLACE PROCEDURE apligas.gst_sp_rtv_recpublicos_x_mun (
-   pd_ad_user_session_id       IN       NUMBER,
-   pd_ad_client_id             IN       NUMBER,
-   pd_ad_org_id                IN       NUMBER,
-   p_gst_tarifaria_id          IN       NUMBER,
-   p_c_region_id               IN       NUMBER,
-   p_c_city_id                 IN       NUMBER,
-   p_c_sector_id               IN       NUMBER,
-   p_gst_mercado_especial_id   IN       NUMBER,
-   p_indicador                 OUT      CHAR,
-   msg_error                   OUT      VARCHAR2,
-   error_source                OUT      VARCHAR2
+
+/* Formatted on 2015/03/27 14:48 (Formatter Plus v4.8.8) */
+CREATE OR REPLACE PROCEDURE APLIGAS.GST_SP_RTV_RECPUBLICOS_X_MUN (
+   PD_AD_USER_SESSION_ID       IN       NUMBER,
+   PD_AD_CLIENT_ID             IN       NUMBER,
+   PD_AD_ORG_ID                IN       NUMBER,
+   P_GST_TARIFARIA_ID          IN       NUMBER,
+   P_C_REGION_ID               IN       NUMBER,
+   P_C_CITY_ID                 IN       NUMBER,
+   P_C_SECTOR_ID               IN       NUMBER,
+   P_GST_MERCADO_ESPECIAL_ID   IN       NUMBER,
+   P_INDICADOR                 OUT      CHAR,
+   MSG_ERROR                   OUT      VARCHAR2,
+   ERROR_SOURCE                OUT      VARCHAR2
 )
 IS
-   v_gst_recur_publico_id      NUMBER (10, 0);
-   v_gst_cont_reg              NUMBER (10, 0);
-   v_gst_mercado_especial_id   NUMBER (10, 0);
-   v_count_rpublico_mun        NUMBER;
-   spcall_error                EXCEPTION;
-   splogic_error               EXCEPTION;
-   vd_ad_client_id             NUMBER (10, 0);
-   vd_ad_org_id                NUMBER (10, 0);
-   vd_ad_user_id               NUMBER (10, 0);
+   V_GST_RECUR_PUBLICO_ID      NUMBER (10, 0);
+   V_GST_CONT_REG              NUMBER (10, 0);
+   V_GST_MERCADO_ESPECIAL_ID   NUMBER (10, 0);
+   V_COUNT_RPUBLICO_MUN        NUMBER;
+   SPCALL_ERROR                EXCEPTION;
+   SPLOGIC_ERROR               EXCEPTION;
+   VD_AD_CLIENT_ID             NUMBER (10, 0);
+   VD_AD_ORG_ID                NUMBER (10, 0);
+   VD_AD_USER_ID               NUMBER (10, 0);
 BEGIN
-   vd_ad_client_id :=
-      apligas.adm_fn_rtv_client_default (pd_ad_user_session_id,
-                                         pd_ad_client_id,
-                                         pd_ad_org_id
+   VD_AD_CLIENT_ID :=
+      APLIGAS.ADM_FN_RTV_CLIENT_DEFAULT (PD_AD_USER_SESSION_ID,
+                                         PD_AD_CLIENT_ID,
+                                         PD_AD_ORG_ID
                                         );
-   vd_ad_org_id :=
-      apligas.adm_fn_rtv_org_default (pd_ad_user_session_id,
-                                      pd_ad_client_id,
-                                      pd_ad_org_id
+   VD_AD_ORG_ID :=
+      APLIGAS.ADM_FN_RTV_ORG_DEFAULT (PD_AD_USER_SESSION_ID,
+                                      PD_AD_CLIENT_ID,
+                                      PD_AD_ORG_ID
                                      );
-   vd_ad_user_id :=
-      apligas.adm_fn_rtv_user_default (pd_ad_user_session_id,
-                                       pd_ad_client_id,
-                                       pd_ad_org_id
+   VD_AD_USER_ID :=
+      APLIGAS.ADM_FN_RTV_USER_DEFAULT (PD_AD_USER_SESSION_ID,
+                                       PD_AD_CLIENT_ID,
+                                       PD_AD_ORG_ID
                                       );
 
    BEGIN
-      SELECT gst_recur_publico_id
-        INTO v_gst_recur_publico_id
-        FROM apligas.gst_recur_publico
-       WHERE gst_tarifaria_id = p_gst_tarifaria_id AND estado = 'A';
+      SELECT GST_RECUR_PUBLICO_ID
+        INTO V_GST_RECUR_PUBLICO_ID
+        FROM APLIGAS.GST_RECUR_PUBLICO
+       WHERE GST_TARIFARIA_ID = P_GST_TARIFARIA_ID AND ESTADO = 'A';
    EXCEPTION
       WHEN NO_DATA_FOUND
       THEN
-         v_gst_recur_publico_id := NULL;
+         V_GST_RECUR_PUBLICO_ID := NULL;
    END;
 
-   IF (v_gst_recur_publico_id IS NULL)
+   IF (V_GST_RECUR_PUBLICO_ID IS NULL)
    THEN
-      p_indicador := 'N';
+      P_INDICADOR := 'N';
    ELSE
       BEGIN
          SELECT COUNT (1)
-           INTO v_gst_cont_reg
-           FROM apligas.gst_rpublico_gen
-          WHERE gst_recur_publico_id = v_gst_recur_publico_id AND estado = 'A';
+           INTO V_GST_CONT_REG
+           FROM APLIGAS.GST_RPUBLICO_GEN
+          WHERE GST_RECUR_PUBLICO_ID = V_GST_RECUR_PUBLICO_ID AND ESTADO = 'A';
       EXCEPTION
          WHEN NO_DATA_FOUND
          THEN
-            v_gst_cont_reg := 0;
+            V_GST_CONT_REG := 0;
       END;
 
-      IF (v_gst_cont_reg > 0)
+      IF (V_GST_CONT_REG > 0)
       THEN
-         p_indicador := 'Y';
+         P_INDICADOR := 'Y';
       ELSE
-         IF (p_gst_mercado_especial_id IS NOT NULL)
+         IF (P_GST_MERCADO_ESPECIAL_ID IS NOT NULL)
          THEN
-            v_gst_mercado_especial_id := p_gst_mercado_especial_id;
+            V_GST_MERCADO_ESPECIAL_ID := P_GST_MERCADO_ESPECIAL_ID;
          ELSE
-            IF (p_c_sector_id IS NOT NULL)
+            IF (P_C_SECTOR_ID IS NOT NULL)
             THEN
                BEGIN
-                  SELECT gst_mercado_especial_id
-                    INTO v_gst_mercado_especial_id
-                    FROM gst_mercado_especial
-                   WHERE gst_tarifaria_id = p_gst_tarifaria_id
-                     AND c_region_id = p_c_region_id
-                     AND c_city_id = p_c_city_id
-                     AND c_sector_id = p_c_sector_id
-                     AND estado = 'A';
+                  SELECT GST_MERCADO_ESPECIAL_ID
+                    INTO V_GST_MERCADO_ESPECIAL_ID
+                    FROM GST_MERCADO_ESPECIAL
+                   WHERE GST_TARIFARIA_ID = P_GST_TARIFARIA_ID
+                     AND C_REGION_ID = P_C_REGION_ID
+                     AND C_CITY_ID = P_C_CITY_ID
+                     AND C_SECTOR_ID = P_C_SECTOR_ID
+                     AND ESTADO = 'A';
                EXCEPTION
                   WHEN NO_DATA_FOUND
                   THEN
-                     v_gst_mercado_especial_id := NULL;
+                     V_GST_MERCADO_ESPECIAL_ID := NULL;
                END;
+            END IF;
 
-               IF (p_c_sector_id IS NULL)
+            IF (P_C_SECTOR_ID IS NULL)
+            THEN
+               V_GST_MERCADO_ESPECIAL_ID := NULL;
+            END IF;
+
+            BEGIN
+               SELECT COUNT (1)
+                 INTO V_COUNT_RPUBLICO_MUN
+                 FROM APLIGAS.GST_RPUBLICO_MUN
+                WHERE GST_RECUR_PUBLICO_ID = V_GST_RECUR_PUBLICO_ID
+                  AND C_REGION_ID = P_C_REGION_ID
+                  AND C_CITY_ID = P_C_CITY_ID
+                  AND ((       (P_C_SECTOR_ID IS NOT NULL)
+                           AND ((C_SECTOR_ID = P_C_SECTOR_ID))
+                        OR ((P_C_SECTOR_ID IS NULL) AND (C_SECTOR_ID IS NULL)
+                           )
+                       )
+                      )
+                  AND (   (    (V_GST_MERCADO_ESPECIAL_ID IS NOT NULL)
+                           AND (GST_MERCADO_ESPECIAL_ID =
+                                                     V_GST_MERCADO_ESPECIAL_ID
+                               )
+                          )
+                       OR (    (V_GST_MERCADO_ESPECIAL_ID IS NULL)
+                           AND (GST_MERCADO_ESPECIAL_ID IS NULL)
+                          )
+                      )
+                  AND ESTADO = 'A';
+            EXCEPTION
+               WHEN NO_DATA_FOUND
                THEN
-                  v_gst_mercado_especial_id := NULL;
-               END IF;
+                  V_COUNT_RPUBLICO_MUN := NULL;
+            END;
 
-               BEGIN
-                  SELECT COUNT (1)
-                    INTO v_count_rpublico_mun
-                    FROM apligas.gst_rpublico_mun
-                   WHERE     gst_recur_publico_id = v_gst_recur_publico_id
-                         AND c_region_id = p_c_region_id
-                         AND c_city_id = p_c_city_id
-                         AND (p_c_sector_id IS NOT NULL)
-                         AND (   (c_sector_id = p_c_sector_id)
-                              OR (    (p_c_sector_id IS NULL)
-                                  AND (c_sector_id IS NULL)
-                                 )
-                             )
-                         AND (    (v_gst_mercado_especial_id IS NOT NULL)
-                              AND (gst_mercado_especial_id =
-                                                     v_gst_mercado_especial_id
-                                  )
-                             )
-                      OR (    (v_gst_mercado_especial_id IS NULL)
-                          AND (gst_mercado_especial_id IS NULL)
-                         );
-               EXCEPTION
-                  WHEN NO_DATA_FOUND
-                  THEN
-                     v_count_rpublico_mun := NULL;
-               END;
-
-               IF (v_count_rpublico_mun > 0)
-               THEN
-                  p_indicador := 'Y';
-               END IF;
+            IF (V_COUNT_RPUBLICO_MUN > 0)
+            THEN
+               P_INDICADOR := 'Y';
+            ELSE
+               P_INDICADOR := 'N';
             END IF;
          END IF;
       END IF;
    END IF;
 EXCEPTION
-   WHEN splogic_error
+   WHEN SPLOGIC_ERROR
    THEN
-      error_source := error_source || ' - GST_SP_RTV_RECPUBLICOS_X_MUN';
+      ERROR_SOURCE := ERROR_SOURCE || ' - GST_SP_RTV_RECPUBLICOS_X_MUN';
       ROLLBACK;
-   WHEN spcall_error
+   WHEN SPCALL_ERROR
    THEN
-      error_source := error_source || ' - GST_SP_RTV_RECPUBLICOS_X_MUN';
+      ERROR_SOURCE := ERROR_SOURCE || ' - GST_SP_RTV_RECPUBLICOS_X_MUN';
       ROLLBACK;
    WHEN OTHERS
    THEN
-      error_source := SQLERRM || ' - GST_SP_RTV_RECPUBLICOS_X_MUN';
-      msg_error := 'TRG-@4302@<br>';
+      ERROR_SOURCE := SQLERRM || ' - GST_SP_RTV_RECPUBLICOS_X_MUN';
+      MSG_ERROR := 'TRG-@4302@<BR>';
       ROLLBACK;
 END;
 /
